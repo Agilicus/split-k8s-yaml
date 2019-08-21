@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+# Copyright 2019 Agilicus Incorporated
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Feel free to use under either Apache-2.0 or MIT license
+
+import sys
+import yaml
+import os
+import re
+
+yaml.SafeDumper.org_represent_str = yaml.SafeDumper.represent_str
+
+def repr_str(dmp, data):
+    if '\n' in data:
+        return dmp.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+    return dmp.org_represent_str(data)
+
+yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
+
+def extract(fname, doc):
+    of = os.path.splitext(fname)[0]
+    if not os.path.isdir(of):
+        os.mkdir(of, 0o0755)
+    ver = re.sub('/', '-', doc['apiVersion'])
+    ofname = os.path.join(of, f"{ver}-{doc['kind']}-{doc['metadata']['namespace']}-{doc['metadata']['name']}.yaml")
+    with open(ofname, 'w') as stream:
+        print("---", file=stream)
+        print(yaml.safe_dump(doc, default_flow_style=False), file=stream)
+
+for fname in sys.argv[1:]:
+    with open(fname, 'r') as stream:
+        try:
+            for doc in yaml.safe_load_all(stream):
+                extract(fname, doc)
+        except yaml.YAMLError as exc:
+            print(f"Error parsing input {fname} :: {exc}", file=sys.stderr)
+            sys.exit(1)
+        finally:
+            sys.exit(1)
