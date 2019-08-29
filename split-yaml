@@ -31,7 +31,10 @@ def extract(fname, doc):
     if not os.path.isdir(of):
         os.mkdir(of, 0o0755)
     ver = re.sub('/', '-', doc['apiVersion'])
-    ofname = os.path.join(of, f"{ver}-{doc['kind']}-{doc['metadata']['namespace']}-{doc['metadata']['name']}.yaml")
+    if 'namespace' in doc['metadata']:
+        ofname = os.path.join(of, f"{ver}-{doc['kind']}-{doc['metadata']['namespace']}-{doc['metadata']['name']}.yaml")
+    else:
+        ofname = os.path.join(of, f"{ver}-{doc['kind']}-{doc['metadata']['name']}.yaml")
     with open(ofname, 'w') as stream:
         print("---", file=stream)
         print(yaml.safe_dump(doc, default_flow_style=False), file=stream)
@@ -44,6 +47,4 @@ for fname in sys.argv[1:]:
                 extract(fname, doc)
         except yaml.YAMLError as exc:
             print(f"Error parsing input {fname} :: {exc}", file=sys.stderr)
-            sys.exit(1)
-        finally:
             sys.exit(1)
