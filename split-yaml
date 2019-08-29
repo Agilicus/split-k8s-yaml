@@ -1,7 +1,4 @@
 #!/usr/bin/python3
-# Copyright 2019 Agilicus Incorporated
-# SPDX-License-Identifier: Apache-2.0 OR MIT
-# Feel free to use under either Apache-2.0 or MIT license
 
 import sys
 import yaml
@@ -17,6 +14,18 @@ def repr_str(dmp, data):
 
 yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
+# If this is a configmap, have a shot at seeing of any values are also
+# yaml, and load them as such, to normalise quotes etc
+def normalise(doc):
+    if doc['kind'] == 'ConfigMap':
+        for item in doc['data']:
+            try:
+                new_item = yaml.safe_load(doc['data'][item])
+                doc['data'][item] = new_item
+            except:
+                pass
+    return doc
+
 def extract(fname, doc):
     of = os.path.splitext(fname)[0]
     if not os.path.isdir(of):
@@ -31,6 +40,7 @@ for fname in sys.argv[1:]:
     with open(fname, 'r') as stream:
         try:
             for doc in yaml.safe_load_all(stream):
+                doc = normalise(doc)
                 extract(fname, doc)
         except yaml.YAMLError as exc:
             print(f"Error parsing input {fname} :: {exc}", file=sys.stderr)
